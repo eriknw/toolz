@@ -1,12 +1,56 @@
-from functools import reduce, partial, update_wrapper
-import itertools
-import inspect
+"""
+Alternate namespece for toolz such that all functions are traced using `q`
+
+Trace log goes to /tmp/q
+
+See Also:
+    toolz.curried
+"""
+import re
+import toolz
+import functools
+from toolz.q import q as tracer
+
+# Decorator functions for tracing
+
+def trace(f, wrapped=None, name=None):
+    if wrapped is not None:
+        # trick "q"
+        f = functools.update_wrapper(f, wrapped)
+    elif name is not None:
+        f.__name__ = name
+        f.func_name = name
+    return functools.update_wrapper(tracer.trace(f), f)
 
 
-def identity(x):
-    return x
+def traceas(wrapped):
+    def inner(f):
+        return trace(f, wrapped=wrapped)
+    return inner
 
 
+def tracewithname(name):
+    def inner(f):
+        return trace(f, name=name)
+    return inner
+
+
+# Now trace all appropriate functions from `toolz` similar to `toolz.curried`
+def traceable(name, f):
+    # '__module__' attribute is required for functools.update_wrapper
+    return '__' not in name and callable(f) and hasattr(f, '__module__')
+
+
+d = dict((name, trace(f) if traceable(name, f) else f)
+         for name, f in toolz.__dict__.items())
+
+locals().update(d)
+
+
+# Now tweak certain functions for improved clarity
+
+# add trace to `evalform_front`
+@trace
 def thread_first(val, *forms):
     """ Thread value through a sequence of functions/forms
 
@@ -31,6 +75,7 @@ def thread_first(val, *forms):
     See Also:
         thread_last
     """
+    @trace
     def evalform_front(val, form):
         if callable(form):
             return form(val)
@@ -41,6 +86,8 @@ def thread_first(val, *forms):
     return reduce(evalform_front, forms, val)
 
 
+# add trace to `evalform_back`
+@trace
 def thread_last(val, *forms):
     """ Thread value through a sequence of functions/forms
 
@@ -70,6 +117,7 @@ def thread_last(val, *forms):
     See Also:
         thread_first
     """
+    @trace
     def evalform_back(val, form):
         if callable(form):
             return form(val)
@@ -80,14 +128,8 @@ def thread_last(val, *forms):
     return reduce(evalform_back, forms, val)
 
 
-def hashable(x):
-    try:
-        hash(x)
-        return True
-    except TypeError:
-        return False
-
-
+# give the memoized function the same name (instead of "memof")
+@trace
 def memoize(f, cache=None):
     """ Cache a function's result for speedy future evaluation
 
@@ -107,6 +149,7 @@ def memoize(f, cache=None):
     if cache is None:
         cache = {}
 
+    @traceas(f)
     def memof(*args):
         try:
             in_cache = args in cache
@@ -124,111 +167,25 @@ def memoize(f, cache=None):
     return memof
 
 
-def _num_required_args(func):
-    """ Number of args for func
+# try really hard to come up with safe function names
+def _clean_name(s):
+    s = re.sub('[^0-9a-zA-Z_]', '', s)
+    s = re.sub('^[^a-zA-Z_]+', '', s)
+    return s[:32]
 
-    >>> def foo(a, b, c=None):
-    ...     return a + b + c
 
-    >>> _num_required_args(foo)
-    2
-
-    >>> def bar(*args):
-    ...     return sum(args)
-
-    >>> print(_num_required_args(bar))
-    None
-    """
+def _safe_funcname(func):
     try:
-        spec = inspect.getargspec(func)
-        if spec.varargs:
-            return None
-        num_defaults = len(spec.defaults) if spec.defaults else 0
-        return len(spec.args) - num_defaults
-    except TypeError:
-        return None
-
-
-class curry(object):
-    """ Curry a callable function
-
-    Enables partial application of arguments through calling a function with an
-    incomplete set of arguments.
-
-    >>> def mul(x, y):
-    ...     return x * y
-    >>> mul = curry(mul)
-
-    >>> double = mul(2)
-    >>> double(10)
-    20
-
-    Also supports keyword arguments
-
-    >>> @curry                  # Can use curry as a decorator
-    ... def f(x, y, a=10):
-    ...     return a * (x + y)
-
-    >>> add = f(a=1)
-    >>> add(2, 3)
-    5
-
-    See Also:
-        toolz.curried - namespace of curried functions
-                        http://toolz.readthedocs.org/en/latest/curry.html
-    """
-    def __init__(self, func, *args, **kwargs):
-        self.func = func
-        self.args = args
-        self.keywords = kwargs if kwargs else None
-        self.__doc__ = self.func.__doc__
+        return _clean_name(func.func_name)
+    except:
         try:
-            self.func_name = self.func.func_name
-        except AttributeError:
-            pass
-        try:
-            self.__name__ = func.__name__
-        except AttributeError:
-            pass
-
-    def __str__(self):
-        return str(self.func)
-
-    def __repr__(self):
-        return repr(self.func)
-
-    def __call__(self, *args, **_kwargs):
-        args = self.args + args
-        if _kwargs:
-            kwargs = {}
-            if self.keywords:
-                kwargs.update(self.keywords)
-            kwargs.update(_kwargs)
-        elif self.keywords:
-            kwargs = self.keywords
-        else:
-            kwargs = {}
-
-        try:
-            return self.func(*args, **kwargs)
-        except TypeError as e:
-            required_args = _num_required_args(self.func)
-
-            # If there was a genuine TypeError
-            if required_args is not None and len(args) >= required_args:
-                raise e
-
-            # If we only need one more argument
-            if (required_args is not None and required_args - len(args) == 1):
-                if kwargs:
-                    return update_wrapper(partial(self.func, *args, **kwargs),
-                                          self.func)
-                else:
-                    return update_wrapper(partial(self.func, *args), self.func)
-
-            return curry(self.func, *args, **kwargs)
+            return _clean_name(func.__name__)
+        except:
+            return _clean_name(repr(func))
 
 
+# create new, meaningful name for composed functions
+@trace
 def compose(*funcs):
     """ Compose functions to operate in series.
 
@@ -252,7 +209,9 @@ def compose(*funcs):
         return funcs[0]
     else:
         fns = list(reversed(funcs))
+        funcname = 'composed_' + '_'.join(_safe_funcname(f) for f in funcs)
 
+        @tracewithname(funcname)
         def composed(*args, **kwargs):
             ret = fns[0](*args, **kwargs)
             for f in fns[1:]:
@@ -260,27 +219,3 @@ def compose(*funcs):
             return ret
 
         return composed
-
-
-def pipe(data, *functions):
-    """ Pipe a value through a sequence of functions
-
-    I.e. ``pipe(data, f, g, h)`` is equivalent to ``h(g(f(data)))``
-
-    We think of the value as progressing through a pipe of several
-    transformations, much like pipes in UNIX
-
-    ``$ cat data | f | g | h``
-
-    >>> double = lambda i: 2 * i
-    >>> pipe(3, double, str)
-    '6'
-
-    See Also:
-        compose
-        thread_first
-        thread_last
-    """
-    for func in functions:
-        data = func(data)
-    return data
