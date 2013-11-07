@@ -11,6 +11,8 @@ def fib(n):
 
 
 # This is intuitive but VERY slow
+from toolz.traced import trace
+@trace
 def fib(n):
     """ Functional definition of Fibonacci numbers """
     if n == 0 or n == 1:
@@ -18,7 +20,12 @@ def fib(n):
     else:
         return fib(n - 1) + fib(n - 2)
 
-from toolz import memoize
+fib(4)
+fib(5)
 
 # Oh wait, it's fast again
+from toolz.traced import memoize
 fib = memoize(fib)
+
+fib(4)
+fib(5)

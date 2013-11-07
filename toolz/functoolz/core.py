@@ -1,6 +1,7 @@
 from functools import reduce, partial, update_wrapper
 import itertools
 import inspect
+import re
 
 
 def identity(x):
@@ -119,7 +120,7 @@ def memoize(f, cache=None):
             result = f(*args)
             cache[args] = result
             return result
-    memof.__name__ = f.__name__
+    memof.__name__ = 'memoized_' + f.__name__
     memof.__doc__ = f.__doc__
     return memof
 
@@ -229,6 +230,31 @@ class curry(object):
             return curry(self.func, *args, **kwargs)
 
 
+# Try really hard to come up with safe function names
+# (is this actually important, and should we put these functions elsewhere?)
+def _clean_name(s):
+    """ Convert a string to a valid python identifier"""
+    # valid names consist of alphanumeric and underscore
+    s = re.sub('[^0-9a-zA-Z_]', '', s)
+    # but cannot start with numeric
+    s = re.sub('^[^a-zA-Z_]+', '', s)
+    return s[:32]
+
+
+def _safe_funcname(func):
+    """ Return a valid and meaningful name for a function-like object"""
+    try:
+        # a real function should have this (what about python3?)
+        return _clean_name(func.func_name)
+    except:
+        try:
+            # a callable (such as a class object) should have this
+            return _clean_name(func.__name__)
+        except:
+            # everything has this
+            return _clean_name(repr(func))
+
+
 def compose(*funcs):
     """ Compose functions to operate in series.
 
@@ -258,6 +284,9 @@ def compose(*funcs):
             for f in fns[1:]:
                 ret = f(ret)
             return ret
+
+        composed.__name__ = 'composed_' + '_'.join(_safe_funcname(f)
+                                                   for f in funcs)
 
         return composed
 
