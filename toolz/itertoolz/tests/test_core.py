@@ -128,6 +128,7 @@ def test_get():
 
     assert get('foo', {}, default='bar') == 'bar'
     assert get({}, [1, 2, 3], default='bar') == 'bar'
+    assert get([0, 2], 'AB', 'C') == ('A', 'C')
 
     assert raises(IndexError, lambda: get(10, 'ABC'))
     assert raises(KeyError, lambda: get(10, {'a': 1}))

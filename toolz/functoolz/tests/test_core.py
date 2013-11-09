@@ -33,6 +33,7 @@ def test_thread_first():
 
 def test_thread_last():
     assert list(thread_last([1, 2, 3], (map, inc), (filter, iseven))) == [2, 4]
+    assert thread_last(2, (add, 5), double) == 14
 
 
 def test_memoize():
