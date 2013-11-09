@@ -16,6 +16,7 @@ script:
 - nosetests --with-doctest --with-coverage --cover-erase --cover-package=toolz > tmp_coverage_output 2>&1
 - cat tmp_coverage_output
 - if [[ $TRAVIS_PYTHON_VERSION != 'pypy' ]]; then grep '^TOTAL.* 0 *100%' tmp_coverage_output ; fi
+- coverage run --source=toolz $(which nosetests)
 - if [[ $TRAVIS_PYTHON_VERSION != 'pypy' ]]; then coverage report --include='toolz*' --omit='*tests*' --show-missing --fail-under=100 ; fi
 - rm -f tmp_coverage_output
 after_success:
