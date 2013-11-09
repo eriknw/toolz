@@ -1,0 +1,4 @@
+[run]
+omit =
+    toolz/tests/test*
+    toolz/*/tests/test*
