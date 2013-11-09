@@ -22,7 +22,6 @@ script:
     - coverage run --source=toolz $(which nosetests) --with-doctest
     - coverage report --show-missing --fail-under=100
     - pep8 --ignore=$PEP8_IGNORE --show-source .
-    - pep8 --help
 
 # load coverage status to https://coveralls.io
 after_success:
