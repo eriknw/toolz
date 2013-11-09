@@ -7,7 +7,7 @@ python:
     - "pypy"
 
 env:
-    - PEP_IGNORE="E121,E122,E125,E127,E128,E221,E225,E302,E303,E401,E501,W391"
+    - PEP_IGNORE="E121,E122,E125,E127,E128,E221,E225,E241,E302,E303,E401,E501,W391"
 
 # command to install dependencies
 install:
@@ -22,6 +22,7 @@ script:
     - coverage run --source=toolz $(which nosetests) --with-doctest
     - coverage report --show-missing --fail-under=100
     - pep8 --ignore=$PEP_IGNORE --show-source .
+    - pep8 --help
 
 # load coverage status to https://coveralls.io
 after_success:
