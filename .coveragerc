@@ -2,3 +2,4 @@
 omit =
     toolz/tests/test*
     toolz/*/tests/test*
+    toolz/compatibility.py
