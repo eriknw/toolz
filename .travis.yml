@@ -15,7 +15,8 @@ install:
 # require 100% coverage (not including test files) to pass Travis CI test
 script:
     - coverage run --source=toolz $(which nosetests) --with-doctest
-    - if [[ $TRAVIS_PYTHON_VERSION != 'pypy' ]]; then coverage report --show-missing --fail-under=100 ; fi
+    - coverage report --show-missing --fail-under=100
+#    - if [[ $TRAVIS_PYTHON_VERSION != 'pypy' ]]; then coverage report --show-missing --fail-under=100 ; fi
 
 # load coverage status to https://coveralls.io
 after_success:
