@@ -93,6 +93,13 @@ def test_nth():
     assert nth(2, 'ABCDE') == 'C'
     assert nth(2, iter('ABCDE')) == 'C'
     assert nth(1, (3, 2, 1)) == 2
+    assert nth([0, 2], (1, 2, 3)) == (1, 3)
+    assert nth([0, 2, 0, 2], iter((1, 2, 3))) == (1, 3, 1, 3)
+    assert nth(1, {1: 'a', 2: 'b'}) in [1, 2]
+    assert sorted(nth([0, 1], {1: 'a', 2: 'b'})) == [1, 2]
+    assert raises(StopIteration, lambda: nth(10, iter([1, 2])))
+    assert raises(StopIteration, lambda: nth([0, 10], iter([1, 2])))
+    assert raises(TypeError, lambda: nth((0, 1), iter([1, 2])))
 
 
 def test_first():

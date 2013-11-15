@@ -266,11 +266,39 @@ def nth(n, seq):
 
     >>> nth(1, 'ABC')
     'B'
+
+    Pass a list to get multiple values, which also works on iterators
+
+    >>> nth([2, 0, 1], 'ABC')
+    ('C', 'A', 'B')
+
+    >>> ''.join(nth([3, 4, 2, 0, 3, 4], iter('ABCDE')))
+    'DECADE'
+
+    See Also:
+        get
     """
+    # efficiently return items from sequences (not dict-types) via `get`
+    if hasattr(seq, '__add__'):  # sequence protocol includes concatenation
+        return get(n, seq)
     try:
-        return seq[n]
+        # try to return quickly if `n` is an integer
+        return next(itertools.islice(seq, n, n + 1))
     except TypeError:
-        return next(itertools.islice(seq, n, None))
+        if not isinstance(n, list):
+            raise
+    # retrieve values (in order) from a list of indices
+    seq = iter(seq)
+    indices = sorted(zip(n, itertools.count()))
+    elements = [None] * len(indices)
+    val = next(seq)
+    prev_index = 0
+    for index, count in indices:
+        if index != prev_index:
+            val = next(itertools.islice(seq, index - prev_index - 1, None))
+            prev_index = index
+        elements[count] = val
+    return tuple(elements)
 
 
 def last(seq):
@@ -327,6 +355,9 @@ def get(ind, seq, default=no_default):
 
     >>> get(['Alice', 'Dennis'], phonebook, None)
     ('555-1234', None)
+
+    See Also:
+        nth
     """
     try:
         return seq[ind]
