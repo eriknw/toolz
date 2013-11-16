@@ -116,8 +116,10 @@ def test_second():
 
 def test_last():
     assert last('ABCDE') == 'E'
+    assert last(iter('ABCDE')) == 'E'
     assert last((3, 2, 1)) == 1
     assert isinstance(last({0: 'zero', 1: 'one'}), int)
+    assert isinstance(last({-1: 'minus'}), int)
 
 
 def test_rest():

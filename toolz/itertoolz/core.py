@@ -278,16 +278,25 @@ def nth(n, seq):
     See Also:
         get
     """
-    # efficiently return items from sequences (not dict-types) via `get`
-    if hasattr(seq, '__add__'):  # sequence protocol includes concatenation
-        return get(n, seq)
+    # For integer `n`, `nth` is equivalent to the following when `seq` is
+    # a sequence or iterable respectively:
+    #
+    # nth_seq = lambda n, seq: seq[n]
+    # nth_iter = lambda n, seq: next(itertools.islice(seq, n, None))
     try:
-        # try to return quickly if `n` is an integer
+        # Choose to be fastest for sequence types and iterators (not dicts)
+        if seq is not iter(seq) and seq[0:1]:
+            # Efficiently return items (but not from dict-types) via `get`
+            return get(n, seq)
+    except TypeError:
+        pass
+    try:
+        # Try to return quickly if `n` is an integer
         return next(itertools.islice(seq, n, n + 1))
     except TypeError:
         if not isinstance(n, list):
             raise
-    # retrieve values (in order) from a list of indices
+    # Retrieve values (in order) from a list of indices
     seq = iter(seq)
     indices = sorted(zip(n, itertools.count()))
     elements = [None] * len(indices)
@@ -308,8 +317,9 @@ def last(seq):
     'C'
     """
     try:
-        return seq[-1]
-    except (TypeError, KeyError):
+        # Choose to be fastest for sequence types.  Slice to fail on dict-types
+        return seq[-1:][0]
+    except TypeError:
         return collections.deque(seq, 1)[0]
 
 
